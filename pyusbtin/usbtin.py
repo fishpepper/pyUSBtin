@@ -256,7 +256,7 @@ class USBtin(object):
         self.rx_thread_state = USBtin.RX_THREAD_TERMINATE
         while self.rx_thread_state != USBtin.RX_THREAD_STOPPED:
             # wait for thread to end, sleep 1ms
-            sleep(1)
+            sleep(0.001)
 
     def rx_thread(self):
         """ main rx thread. this thread will take care to
