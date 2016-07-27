@@ -303,6 +303,8 @@ class USBtin(object):
 
                     elif b != '\r':
                         self.incoming_message += "%c" % b
+        # thread stopped...
+        self.rx_thread_state = USBtin.RX_THREAD_STOPPED
 
     def close_can_channel(self):
         """Close CAN channel."""
