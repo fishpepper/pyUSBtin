@@ -23,4 +23,4 @@ or write to the Free Software Foundation, Inc.,
 # exception class
 class USBtinException(Exception):
     def __init__(self, *args, **kwargs):
-        Exception.__init__(self, *args, **kwargs)
+        super().__init__(self, *args, **kwargs)

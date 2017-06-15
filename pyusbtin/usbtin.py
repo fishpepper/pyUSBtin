@@ -20,12 +20,17 @@ or write to the Free Software Foundation, Inc.,
 """
 
 # imports
+from __future__ import absolute_import, division, print_function
 import serial
+import sys
 from time import sleep
 #from thread import start_new_thread
 import threading
-from pyusbtin.usbtinexception import USBtinException
-from pyusbtin.canmessage import CANMessage
+from .usbtinexception import USBtinException
+from .canmessage import CANMessage
+
+
+PY_VERSION = sys.version_info[0]
 
 
 # this class represents a can message
@@ -87,19 +92,19 @@ class USBtin(object):
             self.serial_port = serial.Serial(port, 115200, timeout=USBtin.READ_TIMEOUT, parity=serial.PARITY_NONE)
 
             # clear port and  make sure we are in configuration mode (close cmd)
-            self.serial_port.write("\rC\r".encode())
+            self.serial_port.write("\rC\r".encode('ascii'))
             sleep(0.1)
 
             self.serial_port.flush()
             self.serial_port.flushInput()  # reset_input_buffer()
 
             print("sending clear port request")
-            self.serial_port.write("C\r".encode())
+            self.serial_port.write("C\r".encode('ascii'))
 
             while True:
-                b = self.serial_port.read(1)[0]
-                #print("RX 0x%02X" % ord(b))
-                if (b == '\r') or (b == chr(0x07)):
+                b = self.serial_port.read(1)
+                #print("RX 0x%02X" % b)
+                if b in (b'\r', b'\x07'):
                     break
 
             # clear port and get version strings
@@ -123,8 +128,9 @@ class USBtin(object):
             cmd -- Command
         """
         print("sending [" + cmd + "]")
-        self.serial_port.write((cmd + "\r").encode())
-        return self.read_response()
+        self.serial_port.write((cmd + "\r").encode('ascii'))
+        if self.rx_thread_state != USBtin.RX_THREAD_RUNNING:
+            return self.read_response()
 
     def read_response(self):
         """ Read response from USBtin"""
@@ -132,15 +138,16 @@ class USBtin(object):
             raise USBtinException("ERROR: you can not call rx on the serial" +
                                   "port when the main rx thread is running!")
 
-        response = ""
+        response = b''
         while True:
-            b = self.serial_port.read(1)[0]
-            if b == '\r':
-                return response
-            elif b == chr(0x07):
+            b = self.serial_port.read(1)
+            if b == b'\r':
+                break
+            elif b == b'\x07':
                 raise USBtinException(self.serial_port.name, "transmit", "BELL signal")
             else:
                 response += b
+        return response
 
     def disconnect(self):
         """Disconnect. Close serial port connection"""
@@ -215,7 +222,7 @@ class USBtin(object):
                              0xB507, 0xBD07]
 
                 # build command
-                cmd = "s%02x%04x" % ((brpopt | 0xC0), (cnfvalues[xopt - 11]))
+                cmd = "s{:02x}{:04x}".foramt(brpopt | 0xC0, cnfvalues[xopt - 11])
                 self.transmit(cmd)
                 print("no preset for given baudrate %d. Set baudrate to %d" %
                       (baudrate, (fosc / ((brpopt + 1) * 2) / xopt)))
@@ -229,7 +236,7 @@ class USBtin(object):
             else:
                 print("Mode %d not supported. Opening listen only." % mode)
 
-            self.transmit("%c" % mode_tx)
+            self.transmit(mode_tx)
 
             # start rx thread:
             self.start_rx_thread()
@@ -242,7 +249,7 @@ class USBtin(object):
         self.rx_thread_state = USBtin.RX_THREAD_RUNNING
         thread = threading.Thread(target=self.rx_thread, args=())
         thread.daemon = True
-        thread.start() 
+        thread.start()
         #start_new_thread(self.rx_thread, (self, self.serial_port))
 
     def stop_rx_thread(self):
@@ -270,9 +277,11 @@ class USBtin(object):
             if rxcount > 0:
                 # fetch all data from serial buffer
                 buf = self.serial_port.read(rxcount)
+                if PY_VERSION == 2:
+                    buf = [ord(b) for b in buf]
 
                 for b in buf:
-                    if (b == '\r') and len(self.incoming_message) > 0:
+                    if (b == ord('\r')) and len(self.incoming_message) > 0:
                         message = self.incoming_message
                         cmd = message[0]
                         if cmd in 'tTrR':
@@ -294,15 +303,15 @@ class USBtin(object):
                         # clear message
                         self.incoming_message = ""
 
-                    elif b == chr(0x07):
+                    elif b == 0x07:
                         # resend first element from tx fifo
                         try:
                             self.send_first_tx_fifo_message()
                         except USBtinException as e:
                             print(e)
 
-                    elif b != '\r':
-                        self.incoming_message += "%c" % b
+                    elif b != ord('\r'):
+                        self.incoming_message += chr(b)
         # thread stopped...
         self.rx_thread_state = USBtin.RX_THREAD_STOPPED
 
@@ -310,7 +319,7 @@ class USBtin(object):
         """Close CAN channel."""
         try:
             self.stop_rx_thread()
-            self.serial_port.write("C\r".encode())
+            self.serial_port.write("C\r".encode('ascii'))
         except serial.SerialTimeoutException as e:
             raise USBtinException(e)
 
@@ -336,7 +345,7 @@ class USBtin(object):
         canmsg = self.tx_fifo[0]
 
         try:
-            self.serial_port.write((canmsg.to_string() + "\r").encode())
+            self.serial_port.write('{}\r'.format(canmsg.to_string()).encode('ascii'))
         except serial.SerialTimeoutException as e:
             raise USBtinException(e)
 
@@ -357,7 +366,7 @@ class USBtin(object):
          value -- Value to write
         """
         try:
-            cmd = "W%02x%02x" % (register, value)
+            cmd = "W{:02x}{:02x}".format(register, value)
             self.transmit(cmd)
         except serial.SerialTimeoutException as e:
             raise USBtinException(e)
