@@ -222,7 +222,7 @@ class USBtin(object):
                              0xB507, 0xBD07]
 
                 # build command
-                cmd = "s{:02x}{:04x}".foramt(brpopt | 0xC0, cnfvalues[xopt - 11])
+                cmd = "s{:02x}{:04x}".format(brpopt | 0xC0, cnfvalues[xopt - 11])
                 self.transmit(cmd)
                 print("no preset for given baudrate %d. Set baudrate to %d" %
                       (baudrate, (fosc / ((brpopt + 1) * 2) / xopt)))
