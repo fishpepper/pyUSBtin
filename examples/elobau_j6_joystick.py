@@ -9,7 +9,7 @@ from time import sleep
 class vjoy(object):
     """ send virtual joystick data to linux event system   """
     def __init__(self):
-        axis_cap = AbsInfo(0,20000,0,0,0,0)
+        axis_cap = AbsInfo(-32700,32700,0,0,0,0)
         self._ev = UInput(name='vjoy',
             events={
                  ecodes.EV_ABS: [
@@ -41,18 +41,18 @@ class vjoy(object):
        self._ev.syn()	
 
     def process_can_data(self, msg):
+        #print(msg)
         if (msg.mid == 0x190):
-            #print(msg)
             # convert axis data to signed
             abs_x = (msg[0] - 256) if (msg[0]>127) else msg[0]
             abs_y = (msg[1] - 256) if (msg[1]>127) else msg[1]
             abs_z = (msg[2] - 256) if (msg[2]>127) else msg[2]
             # flip y
             abs_y = -abs_y
-            # rescale from -100..100 to 0..20000:
-            abs_x = ((abs_x+100) * 100)
-            abs_y = ((abs_y+100) * 100)
-            abs_z = ((abs_z+100) * 100)
+            # rescale from -100..100 to -32700..32700:
+            abs_x = abs_x * 327
+            abs_y = abs_y * 327
+            abs_z = abs_z * 327
             # fetch buttons
             b0 = 1 if (msg[5] & 32) else 0
             b1 = 1 if (msg[5] & 1) else 0
