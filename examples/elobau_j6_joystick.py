@@ -7,7 +7,10 @@ port = "/dev/ttyACM0"
 # id of joystick (fixed, no need to change this)
 j6_can_id = 0x10
 #################################################
-
+# PLEASE NOTE:
+# writing to the virtual joystick device requires
+# root privilegues! so run this as root ...
+#################################################
 # install pyusbtin: 
 from pyusbtin.usbtin import USBtin
 from pyusbtin.canmessage import CANMessage
