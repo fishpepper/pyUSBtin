@@ -105,6 +105,7 @@ class CANMessage(object):
         self.name = name
         self.rtr = rtr
         self.extended = True if mid > 0x7ff else False
+        self._data = 0
 
         if rtr:
             if self.mid in self.dbc_info and dlc != self.dbc_info[self.mid]['dlc']:
