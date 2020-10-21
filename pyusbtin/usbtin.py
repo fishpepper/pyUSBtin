@@ -29,9 +29,9 @@ import threading
 from .usbtinexception import USBtinException
 from .canmessage import CANMessage
 
-
+import logging
+logger = logging.getLogger(__name__)
 PY_VERSION = sys.version_info[0]
-
 
 # this class represents a can message
 class USBtin(object):
@@ -98,12 +98,12 @@ class USBtin(object):
             self.serial_port.flush()
             self.serial_port.flushInput()  # reset_input_buffer()
 
-            print("sending clear port request")
+            logger.debug("sending clear port request")
             self.serial_port.write("C\r".encode('ascii'))
 
             while True:
                 b = self.serial_port.read(1)
-                #print("RX 0x%02X" % b)
+                #logger.debug("RX 0x%02X" % b)
                 if b in (b'\r', b'\x07'):
                     break
 
@@ -113,7 +113,7 @@ class USBtin(object):
             self.serial_number = self.transmit("N")[1:]
 
             # some debug info
-            print("connected to USBtin fw %s, hw %s (serial %s)" % (self.firmware_version, self.hardware_version, self.serial_number))
+            logger.debug("connected to USBtin fw %s, hw %s (serial %s)" % (self.firmware_version, self.hardware_version, self.serial_number))
 
             # reset overflow error flags
             self.transmit("W2D00")
@@ -127,7 +127,7 @@ class USBtin(object):
            Keyword arguments:
             cmd -- Command
         """
-        print("sending [" + cmd + "]")
+        logger.debug("sending [" + cmd + "]")
         self.serial_port.write((cmd + "\r").encode('ascii'))
         if self.rx_thread_state != USBtin.RX_THREAD_RUNNING:
             return self.read_response()
@@ -224,7 +224,7 @@ class USBtin(object):
                 # build command
                 cmd = "s{:02x}{:04x}".format(brpopt | 0xC0, cnfvalues[xopt - 11])
                 self.transmit(cmd)
-                print("no preset for given baudrate %d. Set baudrate to %d" %
+                logger.debug("no preset for given baudrate %d. Set baudrate to %d" %
                       (baudrate, (fosc / ((brpopt + 1) * 2) / xopt)))
 
             # open can channel
@@ -234,7 +234,7 @@ class USBtin(object):
             if mode in mode_dict:
                 mode_tx = mode_dict[mode]
             else:
-                print("Mode %d not supported. Opening listen only." % mode)
+                logger.debug("Mode %d not supported. Opening listen only." % mode)
 
             self.transmit(mode_tx)
 
@@ -268,7 +268,7 @@ class USBtin(object):
     def rx_thread(self):
         """ main rx thread. this thread will take care to
             handle the data from the serial port"""
-        print("rx thread started")
+        logger.debug("rx thread started")
 
         """ process data as long as requested """
         while self.rx_thread_state == USBtin.RX_THREAD_RUNNING:
@@ -298,7 +298,7 @@ class USBtin(object):
                             try:
                                 self.send_first_tx_fifo_message()
                             except USBtinException as e:
-                                print(e)
+                                logger.critical(e)
 
                         # clear message
                         self.incoming_message = ""
@@ -308,7 +308,7 @@ class USBtin(object):
                         try:
                             self.send_first_tx_fifo_message()
                         except USBtinException as e:
-                            print(e)
+                            logger.critical(e)
 
                     elif b != ord('\r'):
                         self.incoming_message += chr(b)
