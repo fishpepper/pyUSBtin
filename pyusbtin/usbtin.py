@@ -346,6 +346,7 @@ class USBtin(object):
 
         try:
             self.serial_port.write('{}\r'.format(canmsg.to_string()).encode('ascii'))
+            self.tx_fifo.pop(0) # send is successful - remove 1st element of fifo
         except serial.SerialTimeoutException as e:
             raise USBtinException(e)
 
