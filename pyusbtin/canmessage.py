@@ -347,9 +347,10 @@ class CANMessage(object):
             elif mtype == 'T':
                 mid = int(msg[index: index + 8], 16)
                 dlc = int(msg[index + 8], 16)
-                index = index + 8
+                index += 1
+                index += 8
                 for i in range(dlc):
-                    data.append(int(msg[index: index +1], 16))
+                    data.append(int(msg[index: index +2], 16))
                     index += 2
             return cls(mid, data=data, dlc=dlc, rtr=rtr)
         else:
